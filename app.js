@@ -80,6 +80,10 @@ const DEFAULT_STATE = {
 // Global App State
 let state = loadState();
 
+// Cloud Config Storage Key
+const SUPABASE_CONFIG_KEY = 'jiwon_supabase_config_v1';
+let supabaseClient = null;
+
 // Calendar State
 let currentCalYear = 2026;
 let currentCalMonth = 10; // 0-indexed: 10 = 11월
@@ -106,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderRoutines();
   renderCalendar();
   initIcons();
+
+  // Initialize Supabase Cloud Sync if configured
+  initSupabase();
 
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
@@ -144,8 +151,188 @@ function loadState() {
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // 클라우드가 연결되어 있으면 비동기로 클라우드에도 즉시 반영
+    if (supabaseClient) {
+      syncToCloud();
+    }
   } catch (e) {
     console.error('Failed to save state', e);
+  }
+}
+
+// ================= SUPABASE REALTIME CLOUD SYNC MODULE =================
+function initSupabase() {
+  try {
+    const rawConfig = localStorage.getItem(SUPABASE_CONFIG_KEY);
+    if (!rawConfig) {
+      updateCloudStatusUI(false);
+      return;
+    }
+    const config = JSON.parse(rawConfig);
+    if (!config.url || !config.key) {
+      updateCloudStatusUI(false);
+      return;
+    }
+
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabaseClient = window.supabase.createClient(config.url, config.key);
+      updateCloudStatusUI(true);
+
+      // 1. 클라우드에서 최신 데이터 가져와 병합
+      fetchFromCloud();
+
+      // 2. 다른 기기(폰/패드)의 변경사항을 실시간으로 수신 대기 (Realtime)
+      subscribeToCloudRealtime();
+    }
+  } catch (err) {
+    console.warn('Supabase init notice:', err);
+    updateCloudStatusUI(false);
+  }
+}
+
+async function fetchFromCloud() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('jiwon_routine_data')
+      .select('*')
+      .eq('id', 'primary_family')
+      .single();
+
+    if (error) {
+      console.log('Cloud fetch notice:', error.message);
+      return;
+    }
+
+    if (data && data.state_data) {
+      state = {
+        ...DEFAULT_STATE,
+        ...data.state_data,
+        baby: data.state_data.baby || DEFAULT_STATE.baby,
+        tasks: Array.isArray(data.state_data.tasks) ? data.state_data.tasks : DEFAULT_STATE.tasks
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderBabyInfo();
+      renderRoutines();
+      renderCalendar();
+    }
+  } catch (e) {
+    console.error('Fetch cloud error:', e);
+  }
+}
+
+async function syncToCloud() {
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient
+      .from('jiwon_routine_data')
+      .upsert({
+        id: 'primary_family',
+        state_data: state,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.warn('Sync to cloud error:', error);
+    }
+  } catch (e) {
+    console.warn('Sync to cloud failed:', e);
+  }
+}
+
+function subscribeToCloudRealtime() {
+  if (!supabaseClient) return;
+  try {
+    supabaseClient
+      .channel('routine_family_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jiwon_routine_data' }, (payload) => {
+        if (payload.new && payload.new.state_data) {
+          // 다른 기기(패드 or 다른 사람 폰)에서 체크/수정한 내용 실시간 반영!
+          state = {
+            ...DEFAULT_STATE,
+            ...payload.new.state_data,
+            baby: payload.new.state_data.baby || DEFAULT_STATE.baby,
+            tasks: Array.isArray(payload.new.state_data.tasks) ? payload.new.state_data.tasks : DEFAULT_STATE.tasks
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          renderBabyInfo();
+          renderRoutines();
+          renderCalendar();
+        }
+      })
+      .subscribe();
+  } catch (e) {
+    console.warn('Realtime subscription notice:', e);
+  }
+}
+
+function updateCloudStatusUI(isConnected) {
+  const badge = document.getElementById('cloudStatusBadge');
+  const btn = document.getElementById('btnConnectSupabase');
+  const urlInput = document.getElementById('supabaseUrlInput');
+  const keyInput = document.getElementById('supabaseKeyInput');
+
+  if (isConnected) {
+    if (badge) {
+      badge.textContent = '🟢 실시간 클라우드 동기화 중';
+      badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+    }
+    if (btn) btn.textContent = '클라우드 재연결 / 설정 업데이트';
+  } else {
+    if (badge) {
+      badge.textContent = '⚪ 로컬 저장 모드';
+      badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500';
+    }
+  }
+
+  // Pre-fill inputs from storage if exists
+  const rawConfig = localStorage.getItem(SUPABASE_CONFIG_KEY);
+  if (rawConfig) {
+    try {
+      const config = JSON.parse(rawConfig);
+      if (urlInput && config.url) urlInput.value = config.url;
+      if (keyInput && config.key) keyInput.value = config.key;
+    } catch (_) {}
+  }
+}
+
+async function handleConnectSupabase() {
+  const url = document.getElementById('supabaseUrlInput').value.trim();
+  const key = document.getElementById('supabaseKeyInput').value.trim();
+
+  if (!url || !key) {
+    alert('Supabase Project URL과 API Key를 모두 입력해 주세요.');
+    return;
+  }
+
+  try {
+    const client = window.supabase.createClient(url, key);
+    // 연결 테스트 및 현재 로컬 데이터를 클라우드로 최초 업로드
+    const { data, error } = await client
+      .from('jiwon_routine_data')
+      .upsert({
+        id: 'primary_family',
+        state_data: state,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      if (error.code === '42P01' || error.message.includes('relation') || error.message.includes('not found')) {
+        alert('Supabase 프로젝트에 아직 테이블이 생성되지 않았습니다!\nSupabase 웹사이트의 [SQL Editor] 메뉴에서 아래 코드를 복사해서 실행해 주세요:\n\nCREATE TABLE jiwon_routine_data (\n  id TEXT PRIMARY KEY,\n  state_data JSONB,\n  updated_at TIMESTAMPTZ\n);\nALTER TABLE jiwon_routine_data ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "allow_all" ON jiwon_routine_data FOR ALL USING (true) WITH CHECK (true);');
+        return;
+      }
+      alert('연결 오류: ' + error.message);
+      return;
+    }
+
+    // 설정 영구 저장
+    localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify({ url, key }));
+    supabaseClient = client;
+    updateCloudStatusUI(true);
+    subscribeToCloudRealtime();
+    alert('🎉 축하합니다! 가족 클라우드가 성공적으로 연결되었습니다.\n이제 패드, 폰, PC 등 모든 기기에서 실시간으로 데이터가 함께 공유됩니다!');
+  } catch (err) {
+    alert('클라우드 연결 중 오류가 발생했습니다: ' + err.message);
   }
 }
 
