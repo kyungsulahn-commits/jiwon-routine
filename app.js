@@ -121,16 +121,19 @@ function initIcons() {
   }
 }
 
-// ================= STORAGE =================
+// ================= STORAGE (안전한 영구 보존 및 데이터 마이그레이션) =================
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Ensure baby info exists
-      if (!parsed.baby) parsed.baby = DEFAULT_STATE.baby;
-      if (!parsed.tasks) parsed.tasks = DEFAULT_STATE.tasks;
-      return parsed;
+      // 기존 사용자가 입력해 둔 루틴과 아기 정보가 절대 날아가지 않도록 안전하게 병합
+      return {
+        ...DEFAULT_STATE,
+        ...parsed,
+        baby: parsed.baby || DEFAULT_STATE.baby,
+        tasks: Array.isArray(parsed.tasks) ? parsed.tasks : DEFAULT_STATE.tasks
+      };
     }
   } catch (e) {
     console.error('Failed to load storage, using default', e);
