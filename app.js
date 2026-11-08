@@ -160,15 +160,37 @@ function addDaysToDateStr(dateStr, days) {
   return `${ny}-${nm}-${nd}`;
 }
 
-function diffDaysFromToday(targetDateStr) {
-  const todayStr = getTodayStr();
-  const [y1, m1, d1] = todayStr.split('-').map(Number);
-  const [y2, m2, d2] = targetDateStr.split('-').map(Number);
-
+function diffDaysBetweenDates(dateStrA, dateStrB) {
+  const [y1, m1, d1] = dateStrA.split('-').map(Number);
+  const [y2, m2, d2] = dateStrB.split('-').map(Number);
   const dt1 = new Date(y1, m1 - 1, d1).getTime();
   const dt2 = new Date(y2, m2 - 1, d2).getTime();
-  const diffTime = dt2 - dt1;
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  return Math.round((dt2 - dt1) / (1000 * 60 * 60 * 24));
+}
+
+function diffDaysFromToday(targetDateStr) {
+  return diffDaysBetweenDates(getTodayStr(), targetDateStr);
+}
+
+// Check if a routine is projected to occur on a target future/today date
+function isTaskScheduledOnDate(task, targetDateStr, todayStr) {
+  // 과거 날짜는 예정으로 찍지 않음 (실제 완료 기록만 달력에 표시)
+  if (targetDateStr < todayStr) return false;
+
+  const cycle = task.cycleDays || 1;
+  const firstDue = task.nextDueDate;
+
+  if (firstDue < todayStr) {
+    // 이미 지연(Overdue)된 경우: 오늘은 무조건 수행 대상
+    if (targetDateStr === todayStr) return true;
+    // 그 이후 미래 날짜: 오늘 기준 주기 투영
+    const diff = diffDaysBetweenDates(todayStr, targetDateStr);
+    return diff > 0 && diff % cycle === 0;
+  } else {
+    // 정상 미래 또는 오늘 예정
+    const diff = diffDaysBetweenDates(firstDue, targetDateStr);
+    return diff >= 0 && diff % cycle === 0;
+  }
 }
 
 function formatKoreanDate(dateStr) {
@@ -583,12 +605,17 @@ function renderUpcomingCard(task) {
 }
 
 // ================= TASK COMPLETION LOGIC =================
-function triggerCompleteTask(taskId) {
+function triggerCompleteTask(taskId, defaultDate) {
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task) return;
 
   activeCompletingTaskId = taskId;
   document.getElementById('completeTaskTitle').textContent = task.title;
+
+  const dateInput = document.getElementById('completeDateInput');
+  if (dateInput) {
+    dateInput.value = defaultDate || getTodayStr();
+  }
 
   const modal = document.getElementById('completeModal');
   modal.classList.remove('hidden');
@@ -605,15 +632,17 @@ function confirmCompleteTask(person) {
   const task = state.tasks.find((t) => t.id === activeCompletingTaskId);
   if (!task) return;
 
-  const todayStr = getTodayStr();
+  const dateInput = document.getElementById('completeDateInput');
+  // 실제 완료한 날짜 (사용자가 변경했거나 오늘)
+  const actualCompletedDate = (dateInput && dateInput.value) ? dateInput.value : getTodayStr();
 
-  // Update task completion
-  task.lastCompletedDate = todayStr;
-  task.nextDueDate = addDaysToDateStr(todayStr, task.cycleDays);
+  // 실제 완료한 날짜를 기준으로 다음 예정일을 +cycleDays 로 재계산!
+  task.lastCompletedDate = actualCompletedDate;
+  task.nextDueDate = addDaysToDateStr(actualCompletedDate, task.cycleDays);
 
   if (!task.history) task.history = [];
   task.history.push({
-    date: todayStr,
+    date: actualCompletedDate,
     completedBy: person,
     timestamp: Date.now()
   });
@@ -624,7 +653,7 @@ function confirmCompleteTask(person) {
   // Trigger celebration confetti!
   triggerConfetti();
 
-  // Re-render
+  // Re-render routines & calendar
   renderRoutines();
   renderCalendar();
 }
@@ -703,8 +732,8 @@ function renderCalendar() {
       });
     });
 
-    // Scheduled next due on this date
-    const dueOnThisDate = relevantTasks.filter((t) => t.nextDueDate === curDateStr);
+    // Projected scheduled tasks on this date (Future repeating projection)
+    const scheduledOnThisDate = relevantTasks.filter((t) => isTaskScheduledOnDate(t, curDateStr, todayStr));
 
     const cell = document.createElement('div');
     cell.className = `calendar-day p-1 rounded-xl flex flex-col items-center justify-between cursor-pointer text-xs font-semibold ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`;
@@ -745,11 +774,11 @@ function renderCalendar() {
       dot.title = '완료';
       badgesCont.appendChild(dot);
     }
-    // 4. Purple/Indigo Dot: 예정된 루틴
-    if (dueOnThisDate.length > 0) {
+    // 4. Purple Dot: 앞으로 해야 할 예정 루틴 (미래 투영)
+    if (scheduledOnThisDate.length > 0) {
       const dot = document.createElement('span');
       dot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs';
-      dot.title = '예정된 루틴';
+      dot.title = `예정된 루틴 (${scheduledOnThisDate.length}건)`;
       badgesCont.appendChild(dot);
     }
     cell.appendChild(badgesCont);
@@ -769,15 +798,19 @@ function renderSelectedDatePanel() {
   const todayStr = getTodayStr();
   title.textContent = `${formatKoreanDate(selectedCalDate)} 내역`;
 
-  if (selectedCalDate === todayStr) {
+  const isToday = selectedCalDate === todayStr;
+  const isPast = selectedCalDate < todayStr;
+  const isFuture = selectedCalDate > todayStr;
+
+  if (isToday) {
     statusBadge.textContent = '오늘';
     statusBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600';
-  } else if (selectedCalDate < todayStr) {
-    statusBadge.textContent = '지난 날짜';
+  } else if (isPast) {
+    statusBadge.textContent = '과거 기록';
     statusBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500';
   } else {
-    statusBadge.textContent = '예정 날짜';
-    statusBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600';
+    statusBadge.textContent = '앞으로의 예정';
+    statusBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600';
   }
 
   const relevantTasks = filterByAssignee(state.tasks);
@@ -792,13 +825,13 @@ function renderSelectedDatePanel() {
     });
   });
 
-  // Due on this date
-  const dueList = relevantTasks.filter((t) => t.nextDueDate === selectedCalDate);
+  // Scheduled tasks on this date (projected by recurring cycle)
+  const scheduledList = relevantTasks.filter((t) => isTaskScheduledOnDate(t, selectedCalDate, todayStr));
 
-  if (completedList.length === 0 && dueList.length === 0) {
+  if (completedList.length === 0 && scheduledList.length === 0) {
     list.innerHTML = `
       <p class="text-xs text-slate-400 py-3 text-center">
-        이 날짜에는 기록된 완료 내역이나 예정된 루틴이 없습니다.
+        이 날짜에는 완료된 기록이나 예정된 루틴이 없습니다.
       </p>
     `;
     return;
@@ -806,11 +839,12 @@ function renderSelectedDatePanel() {
 
   let html = '';
 
+  // 1. Completed Tasks Section
   if (completedList.length > 0) {
-    html += `<div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">완료된 일 (${completedList.length})</div>`;
+    html += `<div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5">이 날 완료한 일 (${completedList.length})</div>`;
     completedList.forEach((item) => {
       html += `
-        <div class="p-2.5 bg-emerald-50/40 border border-emerald-100 rounded-xl flex items-center justify-between text-xs">
+        <div class="p-2.5 bg-emerald-50/40 border border-emerald-100 rounded-xl flex items-center justify-between text-xs mb-1.5">
           <div class="flex items-center space-x-2">
             <span class="text-emerald-600 font-bold">✓</span>
             <span class="font-bold text-slate-800">${escapeHtml(item.task.title)}</span>
@@ -823,9 +857,30 @@ function renderSelectedDatePanel() {
     });
   }
 
-  if (dueList.length > 0) {
-    html += `<div class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mt-3 mb-1">예정된 루틴 (${dueList.length})</div>`;
-    dueList.forEach((task) => {
+  // 2. Scheduled Future/Today Tasks Section
+  if (scheduledList.length > 0) {
+    const label = isToday ? `오늘 해야 할 일 (${scheduledList.length})` : `이 날 해야 할 예정 루틴 (${scheduledList.length})`;
+    html += `<div class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mt-3 mb-1.5">${label}</div>`;
+    scheduledList.forEach((task) => {
+      html += `
+        <div class="p-2.5 bg-indigo-50/40 border border-indigo-100 rounded-xl flex items-center justify-between text-xs mb-1.5">
+          <div class="flex items-center space-x-2 min-w-0">
+            <span class="text-indigo-600 font-bold">⏳</span>
+            <div class="min-w-0">
+              <span class="font-bold text-slate-800 truncate">${escapeHtml(task.title)}</span>
+              <span class="text-[10px] text-slate-400 block">${task.cycleDays}일 주기 반복</span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1.5 flex-shrink-0">
+            ${getAssigneeBadge(task.assignee)}
+            <button onclick="triggerCompleteTask('${task.id}', '${selectedCalDate}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold transition active:scale-95">
+              완료 체크
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
       html += `
         <div class="p-2.5 bg-indigo-50/40 border border-indigo-100 rounded-xl flex items-center justify-between text-xs">
           <div class="flex items-center space-x-2">
