@@ -80,8 +80,10 @@ const DEFAULT_STATE = {
 // Global App State
 let state = loadState();
 
-// Cloud Config Storage Key
+// Cloud Config Storage Key & Built-in Credentials
 const SUPABASE_CONFIG_KEY = 'jiwon_supabase_config_v1';
+const DEFAULT_SUPABASE_URL = 'https://xvawbdopqwaqhnhpmorp.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_Fed1H67pGjck8n2jCYS3bQ_ZzWt5MI1';
 let supabaseClient = null;
 
 // Calendar State
@@ -163,19 +165,23 @@ function saveState() {
 // ================= SUPABASE REALTIME CLOUD SYNC MODULE =================
 function initSupabase() {
   try {
+    let url = DEFAULT_SUPABASE_URL;
+    let key = DEFAULT_SUPABASE_KEY;
+
+    // 사용자 커스텀 설정이 있다면 우선 적용
     const rawConfig = localStorage.getItem(SUPABASE_CONFIG_KEY);
-    if (!rawConfig) {
-      updateCloudStatusUI(false);
-      return;
-    }
-    const config = JSON.parse(rawConfig);
-    if (!config.url || !config.key) {
-      updateCloudStatusUI(false);
-      return;
+    if (rawConfig) {
+      try {
+        const config = JSON.parse(rawConfig);
+        if (config.url && config.key) {
+          url = config.url;
+          key = config.key;
+        }
+      } catch (_) {}
     }
 
-    if (window.supabase && typeof window.supabase.createClient === 'function') {
-      supabaseClient = window.supabase.createClient(config.url, config.key);
+    if (window.supabase && typeof window.supabase.createClient === 'function' && url && key) {
+      supabaseClient = window.supabase.createClient(url, key);
       updateCloudStatusUI(true);
 
       // 1. 클라우드에서 최신 데이터 가져와 병합
@@ -183,6 +189,8 @@ function initSupabase() {
 
       // 2. 다른 기기(폰/패드)의 변경사항을 실시간으로 수신 대기 (Realtime)
       subscribeToCloudRealtime();
+    } else {
+      updateCloudStatusUI(false);
     }
   } catch (err) {
     console.warn('Supabase init notice:', err);
@@ -285,15 +293,19 @@ function updateCloudStatusUI(isConnected) {
     }
   }
 
-  // Pre-fill inputs from storage if exists
+  // Pre-fill inputs from storage or default built-in credentials
+  let curUrl = DEFAULT_SUPABASE_URL;
+  let curKey = DEFAULT_SUPABASE_KEY;
   const rawConfig = localStorage.getItem(SUPABASE_CONFIG_KEY);
   if (rawConfig) {
     try {
       const config = JSON.parse(rawConfig);
-      if (urlInput && config.url) urlInput.value = config.url;
-      if (keyInput && config.key) keyInput.value = config.key;
+      if (config.url) curUrl = config.url;
+      if (config.key) curKey = config.key;
     } catch (_) {}
   }
+  if (urlInput) urlInput.value = curUrl;
+  if (keyInput) keyInput.value = curKey;
 }
 
 async function handleConnectSupabase() {
