@@ -70,15 +70,11 @@
       </div>
 
       <div class="flex items-center space-x-1.5">
-        <button onclick="switchRoutineSubView('manage')" class="flex items-center space-x-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95">
-          <i data-lucide="sliders" class="w-4 h-4"></i>
+        <button onclick="switchRoutineSubView('manage')" class="flex items-center space-x-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95">
+          <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
           <span>루틴 관리</span>
         </button>
-        <button onclick="openAddTaskModal()" class="flex items-center space-x-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow-sm transition active:scale-95">
-          <i data-lucide="plus" class="w-4 h-4"></i>
-          <span class="hidden sm:inline">루틴 추가</span>
-        </button>
-        <button onclick="switchTab('settings')" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-50 transition">
+        <button onclick="switchTab('settings')" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-50 transition" title="설정">
           <i data-lucide="settings" class="w-5 h-5"></i>
         </button>
       </div>
