@@ -893,22 +893,6 @@ function renderSelectedDatePanel() {
       `;
     });
   }
-      html += `
-        <div class="p-2.5 bg-indigo-50/40 border border-indigo-100 rounded-xl flex items-center justify-between text-xs">
-          <div class="flex items-center space-x-2">
-            <span class="text-indigo-600 font-bold">⏳</span>
-            <span class="font-bold text-slate-800">${escapeHtml(task.title)}</span>
-          </div>
-          <div class="flex items-center space-x-1.5">
-            ${getAssigneeBadge(task.assignee)}
-            <button onclick="triggerCompleteTask('${task.id}')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold">
-              완료
-            </button>
-          </div>
-        </div>
-      `;
-    });
-  }
 
   list.innerHTML = html;
 }
