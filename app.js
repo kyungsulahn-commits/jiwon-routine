@@ -824,12 +824,53 @@ function renderSelectedDatePanel() {
   list.innerHTML = html;
 }
 
+// ================= CYCLE HELPERS & PRESETS =================
+function calculateDaysFromUnit(num, unit) {
+  const n = parseInt(num, 10) || 1;
+  if (unit === 'weeks') return n * 7;
+  if (unit === 'months') return n * 30;
+  return n; // 'days'
+}
+
+function updateCyclePreview() {
+  const numInput = document.getElementById('taskCycleNumberInput');
+  const unitInput = document.getElementById('taskCycleUnitInput');
+  const preview = document.getElementById('cyclePreviewText');
+  if (!numInput || !unitInput || !preview) return;
+
+  const num = parseInt(numInput.value, 10) || 1;
+  const unit = unitInput.value;
+  const totalDays = calculateDaysFromUnit(num, unit);
+
+  let desc = '';
+  if (unit === 'weeks') {
+    desc = `${num}주마다 (${totalDays}일 간격)`;
+  } else if (unit === 'months') {
+    desc = `${num}개월마다 (${totalDays}일 간격)`;
+  } else {
+    desc = `${num}일마다`;
+  }
+
+  preview.textContent = `${desc} 반복`;
+}
+
+function setCyclePreset(num, unit) {
+  const numInput = document.getElementById('taskCycleNumberInput');
+  const unitInput = document.getElementById('taskCycleUnitInput');
+  if (numInput) numInput.value = num;
+  if (unitInput) unitInput.value = unit;
+  updateCyclePreview();
+}
+
 // ================= TASK MODAL (ADD / EDIT) =================
 function openAddTaskModal() {
   document.getElementById('taskModalTitle').textContent = '새로운 주기적 루틴 추가';
   document.getElementById('taskIdInput').value = '';
   document.getElementById('taskTitleInput').value = '';
-  document.getElementById('taskCycleInput').value = '7';
+  document.getElementById('taskCycleNumberInput').value = '1';
+  document.getElementById('taskCycleUnitInput').value = 'weeks';
+  updateCyclePreview();
+
   document.getElementById('taskAssigneeInput').value = '경술';
   document.getElementById('taskLastDateInput').value = getTodayStr();
   document.getElementById('taskNotesInput').value = '';
@@ -845,7 +886,24 @@ function openEditTaskModal(taskId) {
   document.getElementById('taskModalTitle').textContent = '루틴 수정하기';
   document.getElementById('taskIdInput').value = task.id;
   document.getElementById('taskTitleInput').value = task.title;
-  document.getElementById('taskCycleInput').value = task.cycleDays;
+
+  // Convert cycleDays into best-fit number and unit
+  const days = task.cycleDays || 1;
+  const numInput = document.getElementById('taskCycleNumberInput');
+  const unitInput = document.getElementById('taskCycleUnitInput');
+
+  if (days >= 30 && days % 30 === 0) {
+    numInput.value = days / 30;
+    unitInput.value = 'months';
+  } else if (days >= 7 && days % 7 === 0) {
+    numInput.value = days / 7;
+    unitInput.value = 'weeks';
+  } else {
+    numInput.value = days;
+    unitInput.value = 'days';
+  }
+  updateCyclePreview();
+
   document.getElementById('taskAssigneeInput').value = task.assignee;
   document.getElementById('taskLastDateInput').value = task.lastCompletedDate || getTodayStr();
   document.getElementById('taskNotesInput').value = task.notes || '';
@@ -863,7 +921,12 @@ function handleSaveTask(e) {
 
   const id = document.getElementById('taskIdInput').value;
   const title = document.getElementById('taskTitleInput').value.trim();
-  const cycleDays = parseInt(document.getElementById('taskCycleInput').value, 10);
+
+  // Custom cycle calculation
+  const num = parseInt(document.getElementById('taskCycleNumberInput').value, 10) || 1;
+  const unit = document.getElementById('taskCycleUnitInput').value;
+  const cycleDays = calculateDaysFromUnit(num, unit);
+
   const assignee = document.getElementById('taskAssigneeInput').value;
   const lastCompletedDate = document.getElementById('taskLastDateInput').value || getTodayStr();
   const notes = document.getElementById('taskNotesInput').value.trim();
