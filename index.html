@@ -43,7 +43,7 @@
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261108_4">
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
   <div id="app" class="max-w-xl mx-auto min-h-screen flex flex-col bg-white shadow-xl relative pb-safe-nav">
@@ -254,6 +254,9 @@
             </button>
             <button onclick="changeCalendarMonth(1)" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition">
               <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+            <button onclick="window.location.reload(true)" class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition ml-1" title="최신 상태로 새로고침">
+              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
             </button>
           </div>
         </div>
@@ -620,6 +623,6 @@
 
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20261108_4"></script>
 </body>
 </html>

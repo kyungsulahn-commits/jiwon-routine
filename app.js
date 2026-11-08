@@ -90,6 +90,11 @@ let activeCompletingTaskId = null;
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
+  // Clear any stale browser cache to ensure latest calendar logic runs
+  if ('caches' in window) {
+    caches.keys().then((keys) => keys.forEach((key) => caches.delete(key))).catch(() => {});
+  }
+
   // Sync calendar date with today
   const todayStr = getTodayStr();
   const [tY, tM] = todayStr.split('-').map(Number);
@@ -104,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
+    navigator.serviceWorker.register('./sw.js?v=4').catch((err) => {
       console.log('SW registration note:', err);
     });
   }
@@ -774,12 +779,19 @@ function renderCalendar() {
       dot.title = '완료';
       badgesCont.appendChild(dot);
     }
-    // 4. Purple Dot: 앞으로 해야 할 예정 루틴 (미래 투영)
+    // 4. Purple Dot: 앞으로 해야 할 예정 루틴 (미래 주기 투영)
     if (scheduledOnThisDate.length > 0) {
       const dot = document.createElement('span');
-      dot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs';
+      dot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs flex-shrink-0';
       dot.title = `예정된 루틴 (${scheduledOnThisDate.length}건)`;
       badgesCont.appendChild(dot);
+
+      if (scheduledOnThisDate.length > 1) {
+        const countSpan = document.createElement('span');
+        countSpan.className = 'text-[9px] font-bold text-indigo-600 leading-none -ml-0.5';
+        countSpan.textContent = scheduledOnThisDate.length;
+        badgesCont.appendChild(countSpan);
+      }
     }
     cell.appendChild(badgesCont);
 
