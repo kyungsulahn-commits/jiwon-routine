@@ -573,9 +573,14 @@ function renderTaskCard(task, type) {
             ${diffText}
           </span>
         ` : isCompleted ? `
-          <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-xl">
-            완료됨
-          </span>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-xl">
+              완료됨
+            </span>
+            <button onclick="event.stopPropagation(); cancelCompleteTask('${task.id}')" title="완료 취소" class="text-xs font-semibold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-xl transition active:scale-95">
+              취소
+            </button>
+          </div>
         ` : `
           <button onclick="triggerCompleteTask('${task.id}')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition active:scale-95">
             완료 체크
@@ -659,6 +664,48 @@ function confirmCompleteTask(person) {
   triggerConfetti();
 
   // Re-render routines & calendar
+  renderRoutines();
+  renderCalendar();
+}
+
+// ================= TASK COMPLETION UNDO (완료 취소 및 이전 주기 복원) =================
+function cancelCompleteTask(taskId, targetTimestamp) {
+  const task = state.tasks.find((t) => t.id === taskId);
+  if (!task) return;
+
+  if (!confirm(`'${task.title}' 완료를 취소하시겠습니까?\n이전 예정 주기로 다시 되돌아갑니다.`)) return;
+
+  if (!task.history || task.history.length === 0) {
+    // 기록이 없더라도 오늘 할 일로 리셋
+    task.lastCompletedDate = '';
+    task.nextDueDate = getTodayStr();
+    saveState();
+    renderRoutines();
+    renderCalendar();
+    return;
+  }
+
+  if (targetTimestamp) {
+    // 특정 타임스탬프의 완료 이력 제거
+    task.history = task.history.filter((h) => h.timestamp !== targetTimestamp);
+  } else {
+    // 가장 최근 완료 이력 제거
+    task.history.pop();
+  }
+
+  // 이전 완료 이력을 찾아 기준일 및 다음 예정일 복원
+  if (task.history.length > 0) {
+    task.history.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    const previousCompleted = task.history[task.history.length - 1];
+    task.lastCompletedDate = previousCompleted.date;
+    task.nextDueDate = addDaysToDateStr(previousCompleted.date, task.cycleDays);
+  } else {
+    // 이전 완료 기록이 아예 없는 경우: 오늘 완료해야 할 일로 복구
+    task.lastCompletedDate = '';
+    task.nextDueDate = getTodayStr();
+  }
+
+  saveState();
   renderRoutines();
   renderCalendar();
 }
@@ -758,10 +805,10 @@ function renderCalendar() {
     const hasJeCompleted = completedOnThisDate.some((item) => item.history.completedBy === '지은');
     const hasOtherCompleted = completedOnThisDate.some((item) => item.history.completedBy !== '경술' && item.history.completedBy !== '지은');
 
-    // 1. Blue Dot: 경술 완료
+    // 1. Green Dot: 경술 완료 (초록색 점)
     if (hasKsCompleted) {
       const dot = document.createElement('span');
-      dot.className = 'w-1.5 h-1.5 rounded-full bg-blue-500 shadow-xs';
+      dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs';
       dot.title = '경술 완료';
       badgesCont.appendChild(dot);
     }
@@ -772,14 +819,7 @@ function renderCalendar() {
       dot.title = '지은 완료';
       badgesCont.appendChild(dot);
     }
-    // 3. Green Dot: 기타 완료
-    if (hasOtherCompleted && !hasKsCompleted && !hasJeCompleted) {
-      const dot = document.createElement('span');
-      dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs';
-      dot.title = '완료';
-      badgesCont.appendChild(dot);
-    }
-    // 4. Purple Dot: 앞으로 해야 할 예정 루틴 (미래 주기 투영)
+    // 3. Purple Dot: 앞으로 해야 할 예정 루틴 (미래 주기 투영)
     if (scheduledOnThisDate.length > 0) {
       const dot = document.createElement('span');
       dot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs flex-shrink-0';
@@ -861,9 +901,14 @@ function renderSelectedDatePanel() {
             <span class="text-emerald-600 font-bold">✓</span>
             <span class="font-bold text-slate-800">${escapeHtml(item.task.title)}</span>
           </div>
-          <span class="font-semibold px-2 py-0.5 rounded-md ${item.history.completedBy === '경술' ? 'badge-ks' : 'badge-je'}">
-            ${item.history.completedBy} 님이 완료
-          </span>
+          <div class="flex items-center space-x-1.5">
+            <span class="font-semibold px-2 py-0.5 rounded-md ${item.history.completedBy === '경술' ? 'badge-ks' : 'badge-je'}">
+              ${item.history.completedBy} 님이 완료
+            </span>
+            <button onclick="cancelCompleteTask('${item.task.id}', ${item.history.timestamp})" title="완료 취소" class="text-[11px] font-bold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded-lg transition active:scale-95">
+              취소
+            </button>
+          </div>
         </div>
       `;
     });
