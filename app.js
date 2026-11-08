@@ -340,7 +340,155 @@ function renderRoutines() {
     upcomingList.innerHTML = upcomingTasks.map((task) => renderUpcomingCard(task)).join('');
   }
 
+  // Update total routines badge
+  const totalBadge = document.getElementById('totalRoutinesCountBadge');
+  if (totalBadge) totalBadge.textContent = state.tasks.length;
+
+  // Also render routine management list
+  renderRoutineManageList();
+
   initIcons();
+}
+
+// ================= ROUTINE SUB-VIEWS TOGGLE =================
+let currentRoutineSubView = 'today'; // 'today' | 'manage'
+
+function switchRoutineSubView(view) {
+  currentRoutineSubView = view;
+  const todayContainer = document.getElementById('subView-today');
+  const manageContainer = document.getElementById('subView-manage');
+  const todayBtn = document.getElementById('subViewBtn-today');
+  const manageBtn = document.getElementById('subViewBtn-manage');
+
+  // Make sure we are in routines tab first
+  switchTab('routines');
+
+  if (view === 'today') {
+    todayContainer.classList.remove('hidden');
+    manageContainer.classList.add('hidden');
+    todayBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-indigo-600 shadow-xs flex items-center justify-center space-x-1.5';
+    manageBtn.className = 'flex-1 py-2 text-xs font-medium rounded-xl transition text-slate-500 hover:text-slate-800 flex items-center justify-center space-x-1.5';
+  } else {
+    todayContainer.classList.add('hidden');
+    manageContainer.classList.remove('hidden');
+    todayBtn.className = 'flex-1 py-2 text-xs font-medium rounded-xl transition text-slate-500 hover:text-slate-800 flex items-center justify-center space-x-1.5';
+    manageBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-indigo-600 shadow-xs flex items-center justify-center space-x-1.5';
+    renderRoutineManageList();
+  }
+}
+
+// ================= ROUTINE MANAGEMENT LIST RENDER =================
+function renderRoutineManageList() {
+  const container = document.getElementById('allRoutinesManageList');
+  if (!container) return;
+
+  const searchInput = document.getElementById('manageSearchInput');
+  const query = (searchInput ? searchInput.value.trim().toLowerCase() : '');
+  const sortSelect = document.getElementById('manageSortSelect');
+  const sortBy = sortSelect ? sortSelect.value : 'nextDue';
+
+  // Filter by assignee & search query
+  let filtered = filterByAssignee(state.tasks);
+  if (query) {
+    filtered = filtered.filter((t) => 
+      t.title.toLowerCase().includes(query) || (t.notes && t.notes.toLowerCase().includes(query))
+    );
+  }
+
+  // Sort
+  filtered.sort((a, b) => {
+    if (sortBy === 'nextDue') {
+      return a.nextDueDate.localeCompare(b.nextDueDate);
+    } else if (sortBy === 'cycle') {
+      return a.cycleDays - b.cycleDays;
+    } else if (sortBy === 'name') {
+      return a.title.localeCompare(b.title);
+    }
+    return 0;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="bg-white rounded-2xl p-8 text-center border border-slate-100 card-shadow space-y-3">
+        <div class="text-3xl">🔍</div>
+        <p class="text-xs text-slate-500 font-medium">검색 결과 또는 등록된 루틴이 없습니다.</p>
+        <button onclick="openAddTaskModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
+          + 새 루틴 추가하기
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map((task) => {
+    const diff = diffDaysFromToday(task.nextDueDate);
+    const historyCount = (task.history || []).length;
+    const isOverdue = diff < 0;
+    const isToday = diff === 0;
+
+    let statusBadge = '';
+    if (isOverdue) {
+      statusBadge = `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">${Math.abs(diff)}일 지남</span>`;
+    } else if (isToday) {
+      statusBadge = `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">오늘 예정</span>`;
+    } else {
+      statusBadge = `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">D-${diff}</span>`;
+    }
+
+    return `
+      <div class="bg-white rounded-2xl p-4 border border-slate-100 card-shadow space-y-3 transition hover:border-indigo-100">
+        <div class="flex items-start justify-between space-x-2">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+              <h4 class="font-bold text-sm text-slate-800">${escapeHtml(task.title)}</h4>
+              ${getAssigneeBadge(task.assignee)}
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
+                ${task.cycleDays}일마다
+              </span>
+              ${statusBadge}
+            </div>
+            ${task.notes ? `<p class="text-xs text-slate-500 mt-1.5 bg-slate-50 p-2 rounded-xl border border-slate-100/60">${escapeHtml(task.notes)}</p>` : ''}
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-50">
+          <div class="flex items-center space-x-2">
+            <span>최근 완료: <strong>${task.lastCompletedDate || '없음'}</strong></span>
+            <span>·</span>
+            <span>다음 예정: <strong>${task.nextDueDate}</strong></span>
+            <span>·</span>
+            <span class="text-indigo-600 font-semibold">총 ${historyCount}회 완료</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center space-x-1.5">
+            <button onclick="triggerCompleteTask('${task.id}')" title="오늘 완료 체크" class="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-bold transition">
+              <i data-lucide="check" class="w-4 h-4"></i>
+            </button>
+            <button onclick="openEditTaskModal('${task.id}')" title="루틴 수정" class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition">
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </button>
+            <button onclick="deleteTaskDirectly('${task.id}')" title="루틴 삭제" class="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  initIcons();
+}
+
+function deleteTaskDirectly(taskId) {
+  const task = state.tasks.find((t) => t.id === taskId);
+  if (!task) return;
+  if (!confirm(`'${task.title}' 루틴을 정말 삭제하시겠습니까?`)) return;
+
+  state.tasks = state.tasks.filter((t) => t.id !== taskId);
+  saveState();
+  renderRoutines();
+  renderCalendar();
 }
 
 function getAssigneeBadge(assignee) {
