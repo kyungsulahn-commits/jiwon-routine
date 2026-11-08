@@ -716,18 +716,40 @@ function renderCalendar() {
     dateNum.textContent = d;
     cell.appendChild(dateNum);
 
-    // Dots/Badges Container
+    // Dots/Badges Container (Color Coded by Person and Scheduled)
     const badgesCont = document.createElement('div');
     badgesCont.className = 'flex items-center space-x-1 mt-0.5';
 
-    if (completedOnThisDate.length > 0) {
+    const hasKsCompleted = completedOnThisDate.some((item) => item.history.completedBy === '경술');
+    const hasJeCompleted = completedOnThisDate.some((item) => item.history.completedBy === '지은');
+    const hasOtherCompleted = completedOnThisDate.some((item) => item.history.completedBy !== '경술' && item.history.completedBy !== '지은');
+
+    // 1. Blue Dot: 경술 완료
+    if (hasKsCompleted) {
       const dot = document.createElement('span');
-      dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+      dot.className = 'w-1.5 h-1.5 rounded-full bg-blue-500 shadow-xs';
+      dot.title = '경술 완료';
       badgesCont.appendChild(dot);
     }
+    // 2. Pink Dot: 지은 완료
+    if (hasJeCompleted) {
+      const dot = document.createElement('span');
+      dot.className = 'w-1.5 h-1.5 rounded-full bg-pink-500 shadow-xs';
+      dot.title = '지은 완료';
+      badgesCont.appendChild(dot);
+    }
+    // 3. Green Dot: 기타 완료
+    if (hasOtherCompleted && !hasKsCompleted && !hasJeCompleted) {
+      const dot = document.createElement('span');
+      dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs';
+      dot.title = '완료';
+      badgesCont.appendChild(dot);
+    }
+    // 4. Purple/Indigo Dot: 예정된 루틴
     if (dueOnThisDate.length > 0) {
       const dot = document.createElement('span');
-      dot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-500';
+      dot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs';
+      dot.title = '예정된 루틴';
       badgesCont.appendChild(dot);
     }
     cell.appendChild(badgesCont);
