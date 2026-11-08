@@ -520,7 +520,7 @@ function deleteTaskDirectly(taskId) {
 
 function getAssigneeBadge(assignee) {
   if (assignee === '경술') {
-    return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-ks">경술 💙</span>`;
+    return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-ks">경술 💚</span>`;
   } else if (assignee === '지은') {
     return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-je">지은 💖</span>`;
   }
@@ -536,7 +536,7 @@ function renderTaskCard(task, type) {
   const borderClass = isOverdue 
     ? 'border-rose-200 bg-rose-50/30' 
     : isCompleted 
-    ? 'border-emerald-100 bg-emerald-50/20 opacity-80' 
+    ? 'border-blue-100 bg-blue-50/20 opacity-80' 
     : 'border-slate-100 bg-white';
 
   return `
@@ -544,7 +544,7 @@ function renderTaskCard(task, type) {
       <div class="flex items-center space-x-3 flex-1 min-w-0" onclick="openEditTaskModal('${task.id}')">
         <div class="flex-shrink-0">
           ${isCompleted ? `
-            <div class="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+            <div class="w-8 h-8 rounded-xl bg-blue-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
               ✓
             </div>
           ` : `
@@ -574,7 +574,7 @@ function renderTaskCard(task, type) {
           </span>
         ` : isCompleted ? `
           <div class="flex items-center space-x-1.5">
-            <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-xl">
+            <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-xl">
               완료됨
             </span>
             <button onclick="event.stopPropagation(); cancelCompleteTask('${task.id}')" title="완료 취소" class="text-xs font-semibold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-xl transition active:scale-95">
@@ -893,12 +893,12 @@ function renderSelectedDatePanel() {
 
   // 1. Completed Tasks Section
   if (completedList.length > 0) {
-    html += `<div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5">이 날 완료한 일 (${completedList.length})</div>`;
+    html += `<div class="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1.5">이 날 완료한 일 (${completedList.length})</div>`;
     completedList.forEach((item) => {
       html += `
-        <div class="p-2.5 bg-emerald-50/40 border border-emerald-100 rounded-xl flex items-center justify-between text-xs mb-1.5">
+        <div class="p-2.5 bg-blue-50/40 border border-blue-100 rounded-xl flex items-center justify-between text-xs mb-1.5">
           <div class="flex items-center space-x-2">
-            <span class="text-emerald-600 font-bold">✓</span>
+            <span class="text-blue-600 font-bold">✓</span>
             <span class="font-bold text-slate-800">${escapeHtml(item.task.title)}</span>
           </div>
           <div class="flex items-center space-x-1.5">

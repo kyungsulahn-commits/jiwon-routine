@@ -43,7 +43,7 @@
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
-  <link rel="stylesheet" href="styles.css?v=20261108_4">
+  <link rel="stylesheet" href="styles.css?v=20261108_7">
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
   <div id="app" class="max-w-xl mx-auto min-h-screen flex flex-col bg-white shadow-xl relative pb-safe-nav">
@@ -87,10 +87,10 @@
         <button onclick="setAssigneeFilter('ALL')" id="filterBtn-ALL" class="px-3 py-1.5 rounded-lg transition font-semibold bg-white text-indigo-600 shadow-xs">
           전체 보기
         </button>
-        <button onclick="setAssigneeFilter('경술')" id="filterBtn-경술" class="px-3 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800">
-          경술 💙
+        <button onclick="setAssigneeFilter('경술')" id="filterBtn-경술" class="px-3 py-1.5 rounded-lg transition text-slate-500 hover:text-emerald-700">
+          경술 💚
         </button>
-        <button onclick="setAssigneeFilter('지은')" id="filterBtn-지은" class="px-3 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800">
+        <button onclick="setAssigneeFilter('지은')" id="filterBtn-지은" class="px-3 py-1.5 rounded-lg transition text-slate-500 hover:text-pink-700">
           지은 💖
         </button>
       </div>
@@ -128,7 +128,7 @@
               </div>
             </div>
             <div class="w-full bg-black/20 rounded-full h-2.5 overflow-hidden">
-              <div id="progressBar" class="bg-emerald-400 h-2.5 rounded-full transition-all duration-500" style="width: 33%"></div>
+              <div id="progressBar" class="bg-blue-400 h-2.5 rounded-full transition-all duration-500" style="width: 33%"></div>
             </div>
             <div class="flex items-center justify-between text-xs text-indigo-100 mt-2.5 font-medium">
               <span id="progressOverdueText">⚠️ 기한 지난 일: 1건</span>
@@ -168,10 +168,10 @@
           <!-- Section 3: COMPLETED TODAY (오늘 이미 완료한 일) -->
           <div id="completedTodaySection" class="space-y-2.5">
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5 text-emerald-700 font-bold text-sm">
+              <div class="flex items-center space-x-1.5 text-blue-700 font-bold text-sm">
                 <i data-lucide="sparkles" class="w-4 h-4"></i>
                 <span>오늘 완료했어요</span>
-                <span id="completedCountBadge" class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-bold">1</span>
+                <span id="completedCountBadge" class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">1</span>
               </div>
             </div>
             <div id="completedTodayList" class="space-y-2">
@@ -561,7 +561,7 @@
     <div id="completeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
       <div class="fixed inset-0 modal-backdrop" onclick="closeCompleteModal()"></div>
       <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative z-10 space-y-4 text-center">
-        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-xl font-bold">
+        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl mx-auto flex items-center justify-center text-xl font-bold">
           ✓
         </div>
         <div>
@@ -579,11 +579,11 @@
         </div>
 
         <div class="grid grid-cols-2 gap-3 pt-1">
-          <button onclick="confirmCompleteTask('경술')" class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-100 hover:border-indigo-500 bg-indigo-50/50 hover:bg-indigo-50 transition card-hover">
-            <span class="text-2xl mb-1">💙</span>
-            <span class="text-sm font-bold text-indigo-900">경술 완료</span>
+          <button onclick="confirmCompleteTask('경술')" class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 bg-emerald-50/60 hover:bg-emerald-50 transition card-hover">
+            <span class="text-2xl mb-1">💚</span>
+            <span class="text-sm font-bold text-emerald-900">경술 완료</span>
           </button>
-          <button onclick="confirmCompleteTask('지은')" class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-pink-100 hover:border-pink-500 bg-pink-50/50 hover:bg-pink-50 transition card-hover">
+          <button onclick="confirmCompleteTask('지은')" class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-pink-200 hover:border-pink-500 bg-pink-50/60 hover:bg-pink-50 transition card-hover">
             <span class="text-2xl mb-1">💖</span>
             <span class="text-sm font-bold text-pink-900">지은 완료</span>
           </button>
@@ -623,6 +623,6 @@
 
   </div>
 
-  <script src="app.js?v=20261108_6"></script>
+  <script src="app.js?v=20261108_7"></script>
 </body>
 </html>
