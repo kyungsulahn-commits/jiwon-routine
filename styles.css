@@ -1,0 +1,123 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+:root {
+  --primary: #4F46E5;
+  --primary-light: #EEF2FF;
+  --primary-dark: #3730A3;
+  --secondary: #EC4899;
+  --secondary-light: #FDF2F8;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --bg-main: #F8FAFC;
+  --card-bg: #FFFFFF;
+}
+
+* {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: #1E293B;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+/* Glassmorphism & Cards */
+.card-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover:active {
+  transform: scale(0.985);
+}
+
+/* Bottom Nav Safe Area */
+.pb-safe-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 16px));
+}
+
+/* Pulse animation for urgent items */
+@keyframes soft-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+.urgent-pulse {
+  animation: soft-pulse 2s infinite ease-in-out;
+}
+
+/* Confetti particles */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Modal transition */
+.modal-backdrop {
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Calendar styling */
+.calendar-day {
+  aspect-ratio: 1;
+  transition: background-color 0.15s ease;
+}
+.calendar-day:hover {
+  background-color: #F1F5F9;
+}
+.calendar-day.today {
+  border: 2px solid #4F46E5;
+}
+.calendar-day.selected {
+  background-color: #EEF2FF;
+}
+
+/* Badge glow */
+.badge-ks {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.badge-je {
+  background-color: #FDF2F8;
+  color: #BE185D;
+  border: 1px solid #FBCFE8;
+}
+.badge-all {
+  background-color: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}

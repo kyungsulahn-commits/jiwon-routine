@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>지원루틴 - 우리 아이 육아 관리</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="지원루틴">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              100: '#E0E7FF',
+              200: '#C7D2FE',
+              500: '#6366F1',
+              600: '#4F46E5',
+              700: '#4338CA',
+            },
+            babyPink: {
+              50: '#FDF2F8',
+              100: '#FCE7F3',
+              500: '#EC4899',
+              600: '#DB2777',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+  <div id="app" class="max-w-xl mx-auto min-h-screen flex flex-col bg-white shadow-xl relative pb-safe-nav">
+    
+    <!-- TOP HEADER: Baby Profile & D-Day -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 px-5 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="openBabyEditModal()">
+        <div class="relative">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-indigo-100 font-bold text-lg">
+            👶
+          </div>
+          <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></span>
+        </div>
+        <div>
+          <div class="flex items-center space-x-1.5">
+            <h1 id="babyNameDisplay" class="font-bold text-lg text-slate-800 leading-tight">안지원</h1>
+            <span class="text-xs text-slate-400"><i data-lucide="edit-3" class="w-3.5 h-3.5 inline"></i></span>
+          </div>
+          <div class="flex items-center space-x-2 text-xs font-medium mt-0.5">
+            <span id="babyDdayBadge" class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">D+125일</span>
+            <span id="babyAgeDetail" class="text-slate-400">4개월 2일차</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-1.5">
+        <button onclick="openAddTaskModal()" class="flex items-center space-x-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow-sm transition active:scale-95">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>루틴 추가</span>
+        </button>
+        <button onclick="switchTab('settings')" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-50 transition">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ASSIGNEE FILTER BAR (공통, 경술, 지은) -->
+    <div class="px-5 pt-3 pb-1 bg-white border-b border-slate-50 flex items-center justify-between">
+      <span class="text-xs font-semibold text-slate-400">담당자 보기</span>
+      <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-medium space-x-1" id="assigneeFilterGroup">
+        <button onclick="setAssigneeFilter('ALL')" id="filterBtn-ALL" class="px-3 py-1.5 rounded-lg transition font-semibold bg-white text-indigo-600 shadow-xs">
+          전체 보기
+        </button>
+        <button onclick="setAssigneeFilter('경술')" id="filterBtn-경술" class="px-3 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800">
+          경술 💙
+        </button>
+        <button onclick="setAssigneeFilter('지은')" id="filterBtn-지은" class="px-3 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800">
+          지은 💖
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT CONTAINERS -->
+    <main class="flex-1 px-5 py-4 overflow-y-auto">
+
+      <!-- ================= TAB 1: ROUTINE DASHBOARD (HOME) ================= -->
+      <section id="tab-routines" class="space-y-6">
+        
+        <!-- Progress Summary Banner -->
+        <div class="bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl p-5 text-white shadow-lg shadow-indigo-100 card-shadow">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="text-xs uppercase tracking-wider text-indigo-100 font-semibold">오늘의 루틴 현황</span>
+              <h2 id="progressHeadline" class="text-xl font-bold mt-0.5">할 일 3개 중 1개 완료 ✨</h2>
+            </div>
+            <div id="progressPercent" class="text-2xl font-black bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-2xl">
+              33%
+            </div>
+          </div>
+          <div class="w-full bg-black/20 rounded-full h-2.5 overflow-hidden">
+            <div id="progressBar" class="bg-emerald-400 h-2.5 rounded-full transition-all duration-500" style="width: 33%"></div>
+          </div>
+          <div class="flex items-center justify-between text-xs text-indigo-100 mt-2.5 font-medium">
+            <span id="progressOverdueText">⚠️ 기한 지난 일: 1건</span>
+            <span id="currentDateStr">2026년 11월 8일 (일)</span>
+          </div>
+        </div>
+
+        <!-- Section 1: OVERDUE TASKS (기한 지난 일) -->
+        <div id="overdueSection" class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5 text-rose-600 font-bold text-sm">
+              <i data-lucide="alert-circle" class="w-4 h-4"></i>
+              <span>깜빡했어요! 기한 지난 일</span>
+              <span id="overdueCountBadge" class="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold">1</span>
+            </div>
+            <span class="text-xs text-slate-400">완료 시 새 주기로 갱신됩니다</span>
+          </div>
+          <div id="overdueList" class="space-y-2">
+            <!-- Dynamic Injection -->
+          </div>
+        </div>
+
+        <!-- Section 2: TODAY'S TASKS (오늘 해야 할 일) -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5 text-slate-800 font-bold text-sm">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600"></i>
+              <span>오늘 해야 할 일</span>
+              <span id="todayCountBadge" class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">2</span>
+            </div>
+          </div>
+          <div id="todayList" class="space-y-2">
+            <!-- Dynamic Injection -->
+          </div>
+        </div>
+
+        <!-- Section 3: COMPLETED TODAY (오늘 이미 완료한 일) -->
+        <div id="completedTodaySection" class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5 text-emerald-700 font-bold text-sm">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>오늘 완료했어요</span>
+              <span id="completedCountBadge" class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-bold">1</span>
+            </div>
+          </div>
+          <div id="completedTodayList" class="space-y-2">
+            <!-- Dynamic Injection -->
+          </div>
+        </div>
+
+        <!-- Section 4: UPCOMING TASKS (다가오는 일 D-day) -->
+        <div class="space-y-2.5 pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5 text-slate-700 font-bold text-sm">
+              <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+              <span>앞으로 다가오는 루틴</span>
+            </div>
+            <span class="text-xs text-slate-400">완료일 기준 자동 산출</span>
+          </div>
+          <div id="upcomingList" class="grid grid-cols-1 gap-2">
+            <!-- Dynamic Injection -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= TAB 2: CALENDAR ================= -->
+      <section id="tab-calendar" class="hidden space-y-4">
+        <!-- Calendar Header Controls -->
+        <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-100 card-shadow">
+          <div class="flex items-center space-x-2">
+            <h2 id="calendarMonthTitle" class="text-base font-bold text-slate-800">2026년 11월</h2>
+            <button onclick="goTodayCalendar()" class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-indigo-100 transition">
+              오늘
+            </button>
+          </div>
+          <div class="flex items-center space-x-1">
+            <button onclick="changeCalendarMonth(-1)" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <button onclick="changeCalendarMonth(1)" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Day of Week Header -->
+        <div class="grid grid-cols-7 text-center text-xs font-semibold text-slate-400 py-1">
+          <span class="text-rose-500">일</span>
+          <span>월</span>
+          <span>화</span>
+          <span>수</span>
+          <span>목</span>
+          <span>금</span>
+          <span class="text-indigo-500">토</span>
+        </div>
+
+        <!-- Calendar Days Grid -->
+        <div id="calendarGrid" class="grid grid-cols-7 gap-1 bg-white p-2 rounded-2xl border border-slate-100 card-shadow">
+          <!-- Calendar Days generated dynamically -->
+        </div>
+
+        <!-- Selected Date Details Sheet -->
+        <div id="selectedDatePanel" class="bg-white rounded-2xl p-4 border border-slate-100 card-shadow space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+              <h3 id="selectedDateTitle" class="font-bold text-sm text-slate-800">2026년 11월 8일 (일) 내역</h3>
+            </div>
+            <span id="selectedDateStatusBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">오늘</span>
+          </div>
+
+          <div id="selectedDateTasksList" class="space-y-2">
+            <!-- Completed and Scheduled tasks for the selected date -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: TIMELOG (Preview) ================= -->
+      <section id="tab-timelog" class="hidden space-y-4">
+        <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-center space-y-2">
+          <div class="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-indigo-600 shadow-sm text-2xl">
+            🍼
+          </div>
+          <h2 class="text-base font-bold text-slate-800">베이비 타임로그 (2단계 예정)</h2>
+          <p class="text-xs text-slate-600 max-w-sm mx-auto">
+            수유 시간, 모유/분유량, 수면 시간, 기저귀(대/소변), 이유식 기록을 터치 한 번으로 타이머와 함께 기록할 수 있는 기능입니다.
+          </p>
+        </div>
+
+        <!-- Mock Grid of quick log buttons -->
+        <div class="grid grid-cols-2 gap-3 opacity-60 pointer-events-none">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl">🍼</div>
+            <div>
+              <div class="text-sm font-bold">수유 (분유/모유)</div>
+              <div class="text-xs text-slate-400">마지막 14:30 (160ml)</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl">💤</div>
+            <div>
+              <div class="text-sm font-bold">수면 기록</div>
+              <div class="text-xs text-slate-400">마지막 2시간 15분</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">🧷</div>
+            <div>
+              <div class="text-sm font-bold">기저귀 (대/소변)</div>
+              <div class="text-xs text-slate-400">마지막 16:10 (소변)</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl">🥣</div>
+            <div>
+              <div class="text-sm font-bold">이유식</div>
+              <div class="text-xs text-slate-400">초기 쌀미음 40g</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: GROWTH (Preview) ================= -->
+      <section id="tab-growth" class="hidden space-y-4">
+        <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-center space-y-2">
+          <div class="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-emerald-600 shadow-sm text-2xl">
+            📊
+          </div>
+          <h2 class="text-base font-bold text-slate-800">성장 기록 및 백분위 (3단계 예정)</h2>
+          <p class="text-xs text-slate-600 max-w-sm mx-auto">
+            지원이의 키, 몸무게, 머리둘레를 입력하면 질병관리청 소아 표준 발육곡선 백분위와 함께 성장 그래프를 보여줍니다.
+          </p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 space-y-3 opacity-60">
+          <div class="flex justify-between items-center text-sm font-bold">
+            <span>몸무게 7.1 kg</span>
+            <span class="text-emerald-600">상위 55% (정상 발육)</span>
+          </div>
+          <div class="h-28 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-400">
+            [성장 곡선 차트 미리보기 영역]
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: DIARY (Preview) ================= -->
+      <section id="tab-diary" class="hidden space-y-4">
+        <div class="bg-pink-50 border border-pink-100 rounded-2xl p-5 text-center space-y-2">
+          <div class="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-pink-600 shadow-sm text-2xl">
+            📖
+          </div>
+          <h2 class="text-base font-bold text-slate-800">육아 일기 & 포토 타임라인 (4단계 예정)</h2>
+          <p class="text-xs text-slate-600 max-w-sm mx-auto">
+            오늘 지원이가 처음으로 뒤집기를 성공한 날 등 소중한 순간들을 사진과 한 줄 메모로 남겨두는 앨범입니다.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= TAB 6: SETTINGS ================= -->
+      <section id="tab-settings" class="hidden space-y-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow space-y-4">
+          <h2 class="font-bold text-base text-slate-800 flex items-center space-x-2">
+            <i data-lucide="settings" class="w-5 h-5 text-indigo-600"></i>
+            <span>앱 및 아기 정보 설정</span>
+          </h2>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">아기 이름</label>
+              <input type="text" id="settingBabyName" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="안지원">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">생년월일</label>
+              <input type="date" id="settingBabyBirth" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="2026-07-07">
+            </div>
+            <button onclick="saveBabySettings()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+              아기 정보 저장하기
+            </button>
+          </div>
+        </div>
+
+        <!-- Data Backup & Cloud Sync -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow space-y-4">
+          <h2 class="font-bold text-base text-slate-800 flex items-center space-x-2">
+            <i data-lucide="cloud" class="w-5 h-5 text-indigo-600"></i>
+            <span>데이터 백업 및 클라우드 연동</span>
+          </h2>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            현재 모든 데이터는 안전하게 기기(브라우저)에 자동 저장됩니다. 패드와 폰 간 실시간 동기화를 원하시면 무료 Supabase 연동 키를 입력해 두실 수 있습니다.
+          </p>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportDataJson()" class="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>데이터 백업 (JSON)</span>
+            </button>
+            <label class="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              <span>데이터 복원</span>
+              <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importDataJson(event)">
+            </label>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100">
+            <button onclick="resetToSampleData()" class="text-xs text-rose-500 hover:text-rose-700 font-medium">
+              초기 기본 샘플 데이터로 되돌리기
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION BAR (FIXED) -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-xl mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 px-3 py-2 z-40 flex items-center justify-around">
+      <button onclick="switchTab('routines')" id="navBtn-routines" class="flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl text-indigo-600 font-semibold text-xs transition">
+        <i data-lucide="check-square" class="w-5 h-5"></i>
+        <span>루틴</span>
+      </button>
+      <button onclick="switchTab('calendar')" id="navBtn-calendar" class="flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-600 font-medium text-xs transition">
+        <i data-lucide="calendar" class="w-5 h-5"></i>
+        <span>캘린더</span>
+      </button>
+      <button onclick="switchTab('timelog')" id="navBtn-timelog" class="flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-600 font-medium text-xs transition">
+        <i data-lucide="clock" class="w-5 h-5"></i>
+        <span>타임로그</span>
+      </button>
+      <button onclick="switchTab('growth')" id="navBtn-growth" class="flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-600 font-medium text-xs transition">
+        <i data-lucide="trending-up" class="w-5 h-5"></i>
+        <span>성장</span>
+      </button>
+      <button onclick="switchTab('diary')" id="navBtn-diary" class="flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-600 font-medium text-xs transition">
+        <i data-lucide="book-heart" class="w-5 h-5"></i>
+        <span>일기</span>
+      </button>
+    </nav>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- 1. ADD / EDIT TASK MODAL -->
+    <div id="taskModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+      <div class="fixed inset-0 modal-backdrop" onclick="closeTaskModal()"></div>
+      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative z-10 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 id="taskModalTitle" class="text-base font-bold text-slate-800">새로운 주기적 루틴 추가</h3>
+          <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <form id="taskForm" onsubmit="handleSaveTask(event)" class="space-y-4">
+          <input type="hidden" id="taskIdInput">
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">할 일 이름 <span class="text-rose-500">*</span></label>
+            <input type="text" id="taskTitleInput" required placeholder="예: 브레짜 내부 세척, 물 교체" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">반복 주기 <span class="text-rose-500">*</span></label>
+              <select id="taskCycleInput" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                <option value="1">매일 (1일마다)</option>
+                <option value="2">2일마다</option>
+                <option value="3">3일마다</option>
+                <option value="4">4일마다</option>
+                <option value="5">5일마다</option>
+                <option value="7" selected>주 1회 (7일마다)</option>
+                <option value="14">격주 (14일마다)</option>
+                <option value="30">매월 1회 (30일마다)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">기본 담당자 <span class="text-rose-500">*</span></label>
+              <select id="taskAssigneeInput" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                <option value="경술">경술 💙</option>
+                <option value="지은">지은 💖</option>
+                <option value="공통">공통 (함께)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">마지막으로 완료한 날짜</label>
+            <input type="date" id="taskLastDateInput" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <p class="text-[11px] text-slate-400 mt-1">입력한 날짜에 주기가 더해져 다음 예정일이 자동 계산됩니다.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">메모 / 꿀팁 (선택)</label>
+            <input type="text" id="taskNotesInput" placeholder="예: 구연산 1티스푼 넣기, 끓는 물 3분 소독" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+
+          <div class="flex items-center space-x-2 pt-2">
+            <button type="button" id="deleteTaskBtn" onclick="handleDeleteTask()" class="hidden px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-sm font-semibold transition">
+              삭제
+            </button>
+            <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+              저장하기
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. QUICK COMPLETE MODAL (Who completed this task?) -->
+    <div id="completeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+      <div class="fixed inset-0 modal-backdrop" onclick="closeCompleteModal()"></div>
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative z-10 space-y-4 text-center">
+        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-xl font-bold">
+          ✓
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-800" id="completeTaskTitle">브레짜 내부 세척</h3>
+          <p class="text-xs text-slate-500 mt-1">누가 완료하셨나요? 칭찬 뱃지를 달아드려요!</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button onclick="confirmCompleteTask('경술')" class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-100 hover:border-indigo-500 bg-indigo-50/50 hover:bg-indigo-50 transition card-hover">
+            <span class="text-2xl mb-1">💙</span>
+            <span class="text-sm font-bold text-indigo-900">경술 완료</span>
+          </button>
+          <button onclick="confirmCompleteTask('지은')" class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-pink-100 hover:border-pink-500 bg-pink-50/50 hover:bg-pink-50 transition card-hover">
+            <span class="text-2xl mb-1">💖</span>
+            <span class="text-sm font-bold text-pink-900">지은 완료</span>
+          </button>
+        </div>
+
+        <button onclick="closeCompleteModal()" class="text-xs text-slate-400 hover:text-slate-600 mt-2">
+          취소
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. BABY PROFILE EDIT MODAL -->
+    <div id="babyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+      <div class="fixed inset-0 modal-backdrop" onclick="closeBabyModal()"></div>
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative z-10 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-bold text-slate-800">아기 프로필 변경</h3>
+          <button onclick="closeBabyModal()" class="text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">아기 이름 (또는 태명)</label>
+            <input type="text" id="modalBabyName" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">생년월일</label>
+            <input type="date" id="modalBabyBirth" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <button onclick="saveBabyFromModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+            저장
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

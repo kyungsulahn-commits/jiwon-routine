@@ -1,0 +1,16 @@
+{
+  "name": "지원루틴 - 우리 아이 육아 관리",
+  "short_name": "지원루틴",
+  "description": "안지원을 위한 똑똑한 육아 스케줄 및 주기적 할 일 관리",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#4F46E5",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
